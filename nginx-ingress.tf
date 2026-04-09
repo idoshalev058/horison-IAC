@@ -6,6 +6,10 @@ resource "helm_release" "nginx_ingress" {
   create_namespace = true
   version          = "4.12.0"
 
+# הנה החלק שביקשת:
+  depends_on = [
+    kubectl_manifest.spot_node_pool
+  ]
   # המנגנון שגורם לריסטרט אוטומטי בכל שינוי בערכים
   values = [
     <<-EOT
