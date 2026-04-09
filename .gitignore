@@ -5,7 +5,7 @@
 *.tfstate
 *.tfstate.*
 
-**/backup./*
+**/backup/*
 
 
 # Crash log files
