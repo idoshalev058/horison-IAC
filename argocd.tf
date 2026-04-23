@@ -30,6 +30,7 @@ resource "tls_self_signed_cert" "argocd_cert" {
 
 # 3. יצירת ה-Secret בתוך Kubernetes
 resource "kubernetes_secret_v1" "argocd_server_tls" {
+  depends_on = [kubernetes_namespace.argocd_ns]
   metadata {
     name      = "argocd-server-tls"
     namespace = "argocd"
@@ -42,16 +43,21 @@ resource "kubernetes_secret_v1" "argocd_server_tls" {
     "tls.key" = tls_private_key.argocd_key.private_key_pem
   }
 }
+
 resource "helm_release" "argocd" {
   name             = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
   chart            = "argo-cd"
   namespace        = "argocd"
-  create_namespace = true
-  version          = "7.7.0" # גרסה יציבה ועדכנית
+  # create_namespace = true # Removed since we manage the NS explicitly
+  version          = "7.7.0"
 
-  # מבטיח ש-Argo יותקן רק אחרי שהאינגרס קונטרולר למעלה
-  depends_on = [helm_release.nginx_ingress, kubernetes_secret_v1.argocd_server_tls]
+  # Added dependency on our new ConfigMap
+  depends_on = [
+    helm_release.nginx_ingress, 
+    kubernetes_secret_v1.argocd_server_tls, 
+    kubernetes_config_map_v1.public_repo_config
+  ]
 
   values = [
     <<-EOT
@@ -65,15 +71,12 @@ resource "helm_release" "argocd" {
         hostname: argo.idos-labs.com
         servicePort: 443
         annotations:
-          # אנומציות חיוניות כדי ש-NGINX ידע לדבר עם ה-Internal HTTPS של Argo
           nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
           nginx.ingress.kubernetes.io/proxy-ssl-verify: "off"
           nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
           nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
         
-        # אנחנו משתמשים ב-TLS של Cloudflare (Edge), אז פנימית נעבוד ב-HTTP/HTTPS רגיל
         tls: true
-
     EOT
   ]
 }
