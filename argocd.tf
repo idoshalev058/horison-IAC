@@ -1,3 +1,9 @@
+resource "kubernetes_namespace" "argocd_ns" {
+  metadata {
+    name = "argocd"
+  }
+}
+
 # 1. יצירת מפתח פרטי (Private Key)
 resource "tls_private_key" "argocd_key" {
   algorithm = "RSA"

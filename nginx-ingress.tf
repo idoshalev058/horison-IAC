@@ -1,3 +1,19 @@
+# מבצע עדכון למאגרים לפני כל הרצה של Terraform
+resource "null_resource" "helm_repo_update" {
+  triggers = {
+    # ה-trigger הזה מבטיח שהפקודה תרוץ בכל פעם שאתה מריץ terraform apply
+    always_run = "${timestamp()}"
+  }
+
+  provisioner "local-exec" {
+    command = <<EOT
+      helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+      helm repo update
+    EOT
+  }
+}
+
+
 resource "helm_release" "nginx_ingress" {
   name             = "ingress-nginx"
   repository       = "https://kubernetes.github.io/ingress-nginx"
