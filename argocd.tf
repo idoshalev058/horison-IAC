@@ -108,3 +108,39 @@ resource "kubernetes_secret_v1" "argocd_repo_k3sinfra" {
     insecure = "true"
   }
 }
+
+# 5. יצירת אפליקציית פרומתאוס ב-ArgoCD
+resource "kubectl_manifest" "argocd_app_prometheus" {
+  # We MUST wait for both the ArgoCD CRDs to be installed via Helm
+  # AND the Git repository credentials to be present.
+  depends_on = [
+    helm_release.argocd,
+    kubernetes_secret_v1.argocd_repo_k3sinfra
+  ]
+
+  yaml_body = <<-YAML
+    apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: prometheus
+      namespace: argocd
+      annotations:
+        argocd.argoproj.io/compare-options: ServerSideDiff=true
+    spec:
+      destination:
+        namespace: monitoring
+        server: https://kubernetes.default.svc
+      source:
+        path: wrapper
+        repoURL: https://github.com/idoshalev058/k3sinfra.git
+        targetRevision: main
+        helm:
+          valueFiles:
+            - values.yaml
+      project: default
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+  YAML
+}
