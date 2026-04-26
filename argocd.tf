@@ -2,6 +2,9 @@ resource "kubernetes_namespace" "argocd_ns" {
   metadata {
     name = "argocd"
   }
+    depends_on = [
+    kubectl_manifest.spot_node_pool
+  ]
 }
 
 # 1. יצירת מפתח פרטי (Private Key)
@@ -56,7 +59,6 @@ resource "helm_release" "argocd" {
   depends_on = [
     helm_release.nginx_ingress, 
     kubernetes_secret_v1.argocd_server_tls, 
-    kubernetes_config_map_v1.public_repo_config
   ]
 
   values = [
