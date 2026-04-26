@@ -31,7 +31,7 @@ resource "tls_self_signed_cert" "argocd_cert" {
   ]
 }
 
-# 3. יצירת ה-Secret בתוך Kubernetes
+# 3. יצירת ה-Secret בתוך Kubernetes עבור ה-TLS
 resource "kubernetes_secret_v1" "argocd_server_tls" {
   depends_on = [kubernetes_namespace.argocd_ns]
   metadata {
@@ -55,7 +55,7 @@ resource "helm_release" "argocd" {
   # create_namespace = true # Removed since we manage the NS explicitly
   version          = "7.7.0"
 
-  # Added dependency on our new ConfigMap
+  # Added dependency on our new ConfigMap (and TLS secret)
   depends_on = [
     helm_release.nginx_ingress, 
     kubernetes_secret_v1.argocd_server_tls, 
@@ -81,4 +81,30 @@ resource "helm_release" "argocd" {
         tls: true
     EOT
   ]
+}
+
+# 4. יצירת ה-Secret עבור ה-Repository בתוך ArgoCD
+resource "kubernetes_secret_v1" "argocd_repo_k3sinfra" {
+  # This ensures the secret is created ONLY AFTER the Helm release finishes
+  depends_on = [helm_release.argocd]
+
+  metadata {
+    name      = "my-https-repo-credential"
+    namespace = "argocd"
+    labels = {
+      "argocd.argoproj.io/secret-type" = "repository"
+    }
+  }
+
+  type = "Opaque"
+
+  # In Terraform, 'data' acts like 'stringData' in YAML. 
+  # Terraform automatically handles the base64 encoding behind the scenes.
+  data = {
+    url      = "https://github.com/idoshalev058/k3sinfra.git"
+    username = ""
+    password = ""
+    project  = "default"
+    insecure = "true"
+  }
 }
