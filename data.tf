@@ -16,7 +16,7 @@ data "aws_subnets" "existing_subnets" {
     name   = "tag:Name"
     values = [
       "SPOKE-Networking-328113723980-Stack/VPC/VPC/firewallSubnet1",
-      "SPOKE-Networking-328113723980-Stack/VPC/VPC/firewallSubnet2"
+      "SPOKE-Networking-328113723980-Stack/VPC/VPC/spokeSubnet2"
     ]
   }
 }
